@@ -7,39 +7,41 @@ use tokio::time::Duration;
 
 #[derive(Debug)]
 struct CountdownTimer {
-    name: String,
+    //name: String,
     start: u64,
-    time_unit: TimeUnit,
+    //time_unit: TimeUnit,
     paused: bool
 }
 
 impl CountdownTimer {
-    fn new(name: String, start: u64, time_unit: TimeUnit, paused: &mut bool) -> Self {
+    fn new( start: u64, paused: bool) -> Self {
         CountdownTimer {
-            name,
+            //name,
             start,
-            time_unit,
-            paused: *paused
+            //time_unit,
+            paused
         }
     }
 
     async fn start(&mut self) {
         let mut task_interval = time::interval(Duration::from_secs(1));
-        let seconds = self.to_seconds();
-        if(!self.paused){
+        let seconds = self.start;
+        if!self.paused{
             for i in (0..=seconds).rev() {
+                println!("{} seconds remaining", i);
                 task_interval.tick().await;
+                
             }
         }
     }
 
-    fn to_seconds(&self) -> u64 {
-        match self.time_unit {
-            TimeUnit::HOUR => self.start * 60 * 60,
-            TimeUnit::MINUTE => self.start * 60,
-            TimeUnit::SECOND => self.start,
-        }
-    }
+    // fn to_seconds(&self) -> u64 {
+    //     match self.time_unit {
+    //         TimeUnit::HOUR => self.start * 60 * 60,
+    //         TimeUnit::MINUTE => self.start * 60,
+    //         TimeUnit::SECOND => self.start,
+    //     }
+    // }
 }
 
 #[derive(Debug)]
@@ -60,6 +62,8 @@ pub struct GroovePomodoro {
     value: f32,
     paused: bool,
     seconds: u64,
+    #[serde(skip)]
+    timer: Option<CountdownTimer>,
 }
 
 impl Default for GroovePomodoro {
@@ -69,7 +73,8 @@ impl Default for GroovePomodoro {
             label: "Hello World!".to_owned(),
             value: 2.7,
             paused: false,
-            seconds: 1000
+            seconds: 1000,
+            timer: None
         }
     }
 }
@@ -151,6 +156,25 @@ impl eframe::App for GroovePomodoro {
 
             ui.separator();
             ui.label(self.seconds.to_string());
+            if self.timer.is_none() {
+                self.timer = Some(CountdownTimer::new(self.seconds, self.paused));
+            }
+            
+            // Handle timer display and controls
+            if let Some(timer) = &mut self.timer {
+                let time_str = format!("{}:{}", timer.start / 60, timer.start % 60);
+                timer_ui(ui, "Artist Name", &time_str, &mut self.paused);
+                
+                if ui.button("Start Timer").clicked() {
+                    let ctx = ctx.clone();
+                    let mut timer_clone = timer.clone();
+                    tokio::spawn(async move {
+                        timer_clone.start().await;
+                        ctx.request_repaint();
+                    });
+                }
+            }
+
             ui.add(egui::github_link_file!(
                 "https://github.com/emilk/eframe_template/blob/main/",
                 "Source code."
@@ -186,5 +210,15 @@ fn timer(ui: &mut egui::Ui, artist:&str, time:&str, paused: &mut bool ){
             *paused = !*paused;
         }
         ui.label(paused.to_string());
+    });
+}
+
+fn timer_ui(ui: &mut egui::Ui, artist: &str, time: &str, paused: &mut bool) {
+    ui.vertical(|ui| {
+        ui.label(time);
+        ui.label(artist);
+        if ui.button(if *paused { "Play" } else { "Pause" }).clicked() {
+            *paused = !*paused;
+        }
     });
 }
