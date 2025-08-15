@@ -5,25 +5,27 @@ use egui::FontFamily;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
+pub struct GroovePomodoro {
     // Example stuff:
     label: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+    paused: bool
 }
 
-impl Default for TemplateApp {
+impl Default for GroovePomodoro {
     fn default() -> Self {
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
+            paused: false,
         }
     }
 }
 
-impl TemplateApp {
+impl GroovePomodoro {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -56,7 +58,7 @@ impl TemplateApp {
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for GroovePomodoro {
     /// Called by the framework to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -66,7 +68,6 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
-
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -105,7 +106,7 @@ impl eframe::App for TemplateApp {
                 "https://github.com/emilk/eframe_template/blob/main/",
                 "Source code."
             ));
-            timer(ui, "twenty one pilots");
+            timer(ui, "twenty one pilots", "10:00", &mut self.paused);
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
@@ -128,8 +129,13 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
     });
 }
 
-fn timer(ui: &mut egui::Ui, artist:&str){
-    ui.horizontal(|ui| {
+fn timer(ui: &mut egui::Ui, artist:&str, time:&str, paused: &mut bool ){
+    ui.vertical(|ui| {
+        ui.label(time);
         ui.label(artist);
+        if ui.button("Play").clicked() {
+            *paused = !*paused;
+        }
+        ui.label(paused.to_string());
     });
 }
