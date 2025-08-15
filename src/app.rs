@@ -2,6 +2,53 @@ use rspotify::model::search;
 use egui::FontDefinitions;
 use egui::FontData;
 use egui::FontFamily;
+use tokio::time;
+use tokio::time::Duration;
+
+#[derive(Debug)]
+struct CountdownTimer {
+    name: String,
+    start: u64,
+    time_unit: TimeUnit,
+    paused: bool
+}
+
+impl CountdownTimer {
+    fn new(name: String, start: u64, time_unit: TimeUnit, paused: &mut bool) -> Self {
+        CountdownTimer {
+            name,
+            start,
+            time_unit,
+            paused: *paused
+        }
+    }
+
+    async fn start(&mut self) {
+        let mut task_interval = time::interval(Duration::from_secs(1));
+        let seconds = self.to_seconds();
+        if(!self.paused){
+            for i in (0..=seconds).rev() {
+                task_interval.tick().await;
+            }
+        }
+    }
+
+    fn to_seconds(&self) -> u64 {
+        match self.time_unit {
+            TimeUnit::HOUR => self.start * 60 * 60,
+            TimeUnit::MINUTE => self.start * 60,
+            TimeUnit::SECOND => self.start,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum TimeUnit {
+    HOUR,
+    MINUTE,
+    SECOND,
+}
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -11,7 +58,8 @@ pub struct GroovePomodoro {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
-    paused: bool
+    paused: bool,
+    seconds: u64,
 }
 
 impl Default for GroovePomodoro {
@@ -21,6 +69,7 @@ impl Default for GroovePomodoro {
             label: "Hello World!".to_owned(),
             value: 2.7,
             paused: false,
+            seconds: 1000
         }
     }
 }
@@ -101,7 +150,7 @@ impl eframe::App for GroovePomodoro {
             }
 
             ui.separator();
-
+            ui.label(self.seconds.to_string());
             ui.add(egui::github_link_file!(
                 "https://github.com/emilk/eframe_template/blob/main/",
                 "Source code."
