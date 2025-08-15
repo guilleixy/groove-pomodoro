@@ -1,3 +1,7 @@
+use rspotify::model::search;
+use egui::FontDefinitions;
+use egui::FontData;
+use egui::FontFamily;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -24,7 +28,24 @@ impl TemplateApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+        let mut font_definitions = FontDefinitions::default();
 
+        font_definitions.font_data.insert("my_font".to_owned(),
+        std::sync::Arc::new(
+            // .ttf and .otf supported
+            FontData::from_static(include_bytes!("../assets/fonts/KronaOne-Regular.ttf"))
+        )
+        );
+
+        // Put my font first (highest priority):
+        font_definitions.families.get_mut(&FontFamily::Proportional).unwrap()
+            .insert(0, "my_font".to_owned());
+
+        // Put my font as last fallback for monospace:
+        font_definitions.families.get_mut(&FontFamily::Monospace).unwrap()
+            .push("my_font".to_owned());
+
+        cc.egui_ctx.set_fonts(font_definitions);
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
@@ -68,7 +89,6 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("eframe template");
-
             ui.horizontal(|ui| {
                 ui.label("Write something: ");
                 ui.text_edit_singleline(&mut self.label);
@@ -85,7 +105,7 @@ impl eframe::App for TemplateApp {
                 "https://github.com/emilk/eframe_template/blob/main/",
                 "Source code."
             ));
-
+            timer(ui, "twenty one pilots");
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
@@ -105,5 +125,11 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
             "https://github.com/emilk/egui/tree/master/crates/eframe",
         );
         ui.label(".");
+    });
+}
+
+fn timer(ui: &mut egui::Ui, artist:&str){
+    ui.horizontal(|ui| {
+        ui.label(artist);
     });
 }
